@@ -17,9 +17,9 @@ fn main() -> Result<(), Error> {
 
         match opponent_move {
             "A" => match my_move {
-                "X" => my_score += 4,
-                "Y" => my_score += 8,
-                "Z" => my_score += 3,
+                "X" => my_score += 3,
+                "Y" => my_score += 4,
+                "Z" => my_score += 8,
                 _ => println!("Empty String"),
             },
             "B" => match my_move {
@@ -29,9 +29,9 @@ fn main() -> Result<(), Error> {
                 _ => println!("Empty String"),
             },
             "C" => match my_move {
-                "X" => my_score += 7,
-                "Y" => my_score += 2,
-                "Z" => my_score += 6,
+                "X" => my_score += 2,
+                "Y" => my_score += 6,
+                "Z" => my_score += 7,
                 _ => println!("Empty String"),
             },
             _ => println!("Empty String"),
