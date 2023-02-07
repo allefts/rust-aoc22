@@ -1,117 +1,78 @@
-use std::env;
+use regex::Regex;
+use std::fs;
 
-struct Instruction {
-    count: usize,
+struct Procedure {
+    crates: i32,
     from: usize,
-    to: usize,
+    to: usize
 }
 
-struct SupplyStacks {
-    stacks: Vec<Vec<char>>,
-    instructions: Vec<Instruction>,
+fn part1(stacks: &mut Vec<Vec<char>>, procedures: &Vec<Procedure>) {
+    for procedure in procedures {
+        for _ in 0..procedure.crates {
+            let c = stacks[procedure.from].pop().unwrap();
+            stacks[procedure.to].push(c);
+        }
+    }
+    let mut solution = "".to_owned();
+    for stack in stacks {
+        solution.push(*stack.last().unwrap());
+    }
+    println!("Part 1: {}", solution);
 }
 
-impl SupplyStacks {
-    fn new(filename: &str) -> SupplyStacks {
-        let (stacks, instructions) = Self::parse_stacks(filename).unwrap();
-
-        SupplyStacks {
-            stacks: stacks,
-            instructions: instructions,
+fn part2(stacks: &mut Vec<Vec<char>>, procedures: &Vec<Procedure>) {
+    for procedure in procedures {
+        let mut c_group: Vec<char> = vec![];
+        for _ in 0..procedure.crates {
+            c_group.insert(0, stacks[procedure.from].pop().unwrap());
         }
+        stacks[procedure.to].append(&mut c_group);
     }
-
-    fn run(&mut self) {
-        self.follow_instructions();
-
-        println!("{:#?}", self.stacks);
-        println!("{}", self.skim_top_crates());
+    let mut solution = "".to_owned();
+    for stack in stacks {
+        solution.push(*stack.last().unwrap());
     }
-
-    fn parse_stacks(filename: &str) -> Option<(Vec<Vec<char>>, Vec<Instruction>)> {
-        let text = std::fs::read_to_string(filename).ok()?;
-        let (stack_spec_str, instructions_spec_str) = text.split_once("\n\n")?;
-        let (stack_spec_str, stack_labels) = stack_spec_str.rsplit_once("\n")?;
-        let stack_spec = stack_spec_str.lines();
-        let instructions_spec = instructions_spec_str.lines();
-        let stack_count = stack_labels.split_whitespace().count();
-
-        let mut stacks = vec![Vec::<char>::new(); stack_count + 1];
-
-        for line in stack_spec.rev() {
-            for (idx, payload) in line
-                .chars()
-                .collect::<Vec<_>>()
-                .chunks(4)
-                .enumerate()
-            {
-                let cr8 = payload[1];
-                if cr8.is_alphabetic() {
-                    stacks[idx + 1].push(cr8);
-                }
-            }
-        }
-
-        // To use a Regular Expression here seems attractive, but it ends up being
-        // more work than it is worth. In addition to needing a Cargo.toml, and having
-        // to deal with crate dependencies in order to get access to the Regex crate,
-        // the code ends up being no cleaner, and no shorter, between the `use regex::Regex;`
-        // line at the beginning of the file to the syntax for declaring, using, and accessing
-        // the regular expression and its matches:
-
-        // let re = Regex::new(r"move (\d+) from (\w+) to (\w+)").unwrap();
-        //
-        // let mut instructions = Vec::<Instruction>::new();
-        // for line in instructions_spec {
-        //     if let Some(captures) = re.captures(line) {
-        //         let instruction = Instruction {
-        //             count: captures[1].parse().ok()?,
-        //             from: captures[2].parse().ok()?,
-        //             to: captures[3].parse().ok()?,
-        //         };
-        //         instructions.push(instruction);
-        //     }
-        // }
-
-        let mut instructions = Vec::<Instruction>::new();
-        for line in instructions_spec {
-            let core_information = line.strip_prefix("move ")?;
-            let (count, destination_information) = core_information.split_once(" from ")?;
-            let (from, to) = destination_information.split_once(" to ")?;
-            instructions.push(Instruction {
-                count: count.parse().ok()?,
-                from: from.parse().ok()?,
-                to: to.parse().ok()?,
-            });
-        }
-
-        Some((stacks, instructions))
-    }
-
-    fn follow_instructions(&mut self) {
-        for instruction in &self.instructions {
-            for _ in 0..instruction.count {
-                let item = self.stacks[instruction.from].pop().unwrap();
-                self.stacks[instruction.to].push(item);
-            }
-        }
-    }
-
-    fn skim_top_crates(&self) -> String {
-        self.stacks
-            .iter()
-            .filter(|stack| !stack.is_empty())
-            .map(|stack| *stack.last().unwrap())
-            .collect()
-    }
+    println!("Part 2: {}", solution);
 }
-
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let mut filename = "../input.txt";
-    if let Some(arg) = args.get(1) {
-        filename = arg;
+    let input = fs::read_to_string("../input.txt").unwrap();
+
+    // Parse input into arrangement and procedures.
+    let input_str_pieces: Vec<&str> = input.split("\n\n").collect();
+
+    // Parse arrangement data.
+    let arrangement_str: Vec<&str> = input_str_pieces[0].split("\n").collect();
+    let stacks_height = arrangement_str.len() - 1;
+    // Use the last line to count how many stacks there are, and create a list.
+    let stacks_count = (arrangement_str.last().unwrap().len() + 1) / 4;
+    let mut stacks: Vec<Vec<char>> = vec![vec![]; stacks_count];
+    let stack_regex = Regex::new(r"\[[A-Z]\]|    ").unwrap();
+    let crate_regex = Regex::new(r"[A-Z]").unwrap();
+    for stack_height_index in (0..stacks_height).rev() {
+        let stack_height_str = arrangement_str[stack_height_index];
+        let mut stack_index = 0;
+        for capture in stack_regex.captures_iter(stack_height_str) {
+            if capture[0].starts_with(" ") {
+                stack_index += 1;
+                continue;
+            }
+            let container = &crate_regex.captures(&capture[0]).unwrap()[0];
+            stacks[stack_index].push(container.chars().next().unwrap());
+            stack_index += 1;
+        }
     }
 
-    SupplyStacks::new(filename).run();
+    // Parse procedures.
+    let procedures_str: Vec<&str> = input_str_pieces[1].split("\n").collect();
+    let procedures: Vec<Procedure> = procedures_str.iter().map(|&val| {
+        let split_procedure_str: Vec<&str> = val.split(" ").collect();
+        let crates = split_procedure_str[1].parse::<i32>().unwrap();
+        let from = split_procedure_str[3].parse::<usize>().unwrap() - 1;
+        let to = split_procedure_str[5].parse::<usize>().unwrap() - 1;
+        return Procedure { crates, from, to }
+    }).collect();
+
+    part1(&mut stacks.clone(), &procedures);
+    part2(&mut stacks, &procedures);
 }
