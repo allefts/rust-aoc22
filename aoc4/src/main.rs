@@ -15,6 +15,17 @@ fn main() {
     }).sum();
     
     println!("{}", fully_contained_sum);
+    
+    let fully_overlapped_sum: i32 = lines.iter().map(|pair| {
+        if is_overlapping(pair.0, pair.1) {
+            1
+        } else {
+            0
+        }
+    }).sum();
+    
+    println!("{}", fully_overlapped_sum);
+    
 }
 
 
@@ -25,4 +36,8 @@ fn get_range(input: &str) -> (i32, i32) {
 
 fn is_contained(left: (i32, i32), right: (i32, i32)) -> bool {
     left.0 >=right.0 && left.1 <= right.1
+}
+
+fn is_overlapping(left: (i32, i32), right: (i32, i32)) -> bool {
+    ((left.0 >= right.0 && left.0 <= right.1) || (left.1 >= right.0 && left.1 <= right.1)) || is_contained(right, left)
 }
